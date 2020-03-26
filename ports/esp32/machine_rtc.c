@@ -39,6 +39,12 @@
 #include "timeutils.h"
 #include "modmachine.h"
 #include "machine_rtc.h"
+#if MICROPY_ESP_IDF_4
+#include "esp32/clk.h"
+#else
+#include "esp_clk.h"
+#endif
+
 
 typedef struct _machine_rtc_obj_t {
     mp_obj_base_t base;
@@ -164,9 +170,20 @@ STATIC mp_obj_t machine_rtc_memory(mp_uint_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(machine_rtc_memory_obj, 1, 2, machine_rtc_memory);
 #endif
 
+STATIC mp_obj_t machine_rtc_cal(mp_uint_t n_args, const mp_obj_t *args) {
+    if (n_args == 1) {
+        return mp_obj_new_int(esp_clk_slowclk_cal_get());
+    } else {
+        esp_clk_slowclk_cal_set(mp_obj_get_int(args[1]));
+        return mp_const_none;
+    }
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(machine_rtc_cal_obj, 1, 2, machine_rtc_cal);
+
 STATIC const mp_rom_map_elem_t machine_rtc_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&machine_rtc_init_obj) },
     { MP_ROM_QSTR(MP_QSTR_datetime), MP_ROM_PTR(&machine_rtc_datetime_obj) },
+    { MP_ROM_QSTR(MP_QSTR_cal), MP_ROM_PTR(&machine_rtc_cal_obj) },
     #if MICROPY_HW_RTC_USER_MEM_MAX > 0
     { MP_ROM_QSTR(MP_QSTR_memory), MP_ROM_PTR(&machine_rtc_memory_obj) },
     #endif

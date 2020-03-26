@@ -36,11 +36,14 @@
 #include "nvs_flash.h"
 #include "esp_task.h"
 #include "soc/cpu.h"
+#include "soc/rtc.h"
 #include "esp_log.h"
 #if MICROPY_ESP_IDF_4
 #include "esp32/spiram.h"
+#include "esp32/clk.h"
 #else
 #include "esp_spiram.h"
+#include "esp_clk.h"
 #endif
 
 #include "py/stackctrl.h"
@@ -169,7 +172,25 @@ void app_main(void) {
         nvs_flash_erase();
         nvs_flash_init();
     }
+
+    #if CONFIG_ESP32_RTC_CLK_SRC_EXT_CRYS
+    // print calibration on boot
+    uint32_t cal_val = rtc_clk_cal(RTC_CAL_32K_XTAL, CONFIG_ESP32_RTC_CLK_CAL_CYCLES);
+    int freq = (int)((1 << 19) * 1000000.0f / (float)cal_val);
+    ESP_EARLY_LOGI("clk", "rtc_clk_cal = %d Hz", freq);
+
+    // check that correct clock source is set
+    rtc_slow_freq_t r = rtc_clk_slow_freq_get();
+    if (r != RTC_SLOW_FREQ_32K_XTAL) {
+        ESP_EARLY_LOGE("clk", "rtc_clk_slow_freq: failed to set");
+    }
+    #endif
+
+    #if CONFIG_FREERTOS_UNICORE
+    xTaskCreate(mp_task, "mp_task", MP_TASK_STACK_LEN, NULL, MP_TASK_PRIORITY, &mp_main_task_handle);
+    #else
     xTaskCreatePinnedToCore(mp_task, "mp_task", MP_TASK_STACK_LEN, NULL, MP_TASK_PRIORITY, &mp_main_task_handle, MP_TASK_COREID);
+    #endif
 }
 
 void nlr_jump_fail(void *val) {
