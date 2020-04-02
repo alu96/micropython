@@ -33,6 +33,8 @@
 #include "soc/sens_reg.h"
 #include "driver/gpio.h"
 #include "driver/adc.h"
+#include "driver/uart.h"
+#include "esp_sleep.h"
 
 #include "py/nlr.h"
 #include "py/obj.h"
@@ -42,6 +44,35 @@
 #include "modmachine.h"
 #include "machine_rtc.h"
 #include "modesp32.h"
+
+
+STATIC mp_obj_t esp32_wake_on_uart(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+
+    enum {ARG_uart, ARG_threshold};
+    const mp_arg_t allowed_args[] = {
+        { MP_QSTR_uart,  MP_ARG_OBJ, {.u_obj = mp_const_none} },
+        { MP_QSTR_threshold,  MP_ARG_INT, {.u_int = 3} },
+    };
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
+    if (args[ARG_uart].u_obj != mp_const_none) {
+        mp_int_t uart_num = mp_obj_get_int(args[ARG_uart].u_obj); //(args[0]);
+
+        if (uart_num < 0 || uart_num >= UART_NUM_MAX) {
+            mp_raise_msg_varg(&mp_type_ValueError, "UART(%d) does not exist", uart_num);
+        }
+
+        uart_set_wakeup_threshold(uart_num, args[ARG_threshold].u_int);
+        esp_sleep_enable_uart_wakeup(uart_num);
+    } else {
+        esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_UART);
+    }
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(esp32_wake_on_uart_obj, 0, esp32_wake_on_uart);
+
 
 STATIC mp_obj_t esp32_wake_on_touch(const mp_obj_t wake) {
 
@@ -148,6 +179,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(esp32_hall_sensor_obj, esp32_hall_sensor);
 STATIC const mp_rom_map_elem_t esp32_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_esp32) },
 
+    { MP_ROM_QSTR(MP_QSTR_wake_on_uart), MP_ROM_PTR(&esp32_wake_on_uart_obj) },
     { MP_ROM_QSTR(MP_QSTR_wake_on_touch), MP_ROM_PTR(&esp32_wake_on_touch_obj) },
     { MP_ROM_QSTR(MP_QSTR_wake_on_ext0), MP_ROM_PTR(&esp32_wake_on_ext0_obj) },
     { MP_ROM_QSTR(MP_QSTR_wake_on_ext1), MP_ROM_PTR(&esp32_wake_on_ext1_obj) },
