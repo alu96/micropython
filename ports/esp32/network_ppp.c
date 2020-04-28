@@ -26,7 +26,6 @@
  * THE SOFTWARE.
  */
 
-#if !MICROPY_ESP_IDF_4
 #include "py/runtime.h"
 #include "py/mphal.h"
 #include "py/objtype.h"
@@ -209,7 +208,14 @@ STATIC mp_obj_t ppp_connect_py(size_t n_args, const mp_obj_t *args, mp_map_t *kw
         mp_raise_msg(&mp_type_OSError, "connect failed");
     }
 
-    if (xTaskCreatePinnedToCore(pppos_client_task, "ppp", 2048, self, 1, (TaskHandle_t *)&self->client_task_handle, MP_TASK_COREID) != pdPASS) {
+
+    if (
+    #if CONFIG_FREERTOS_UNICORE
+    xTaskCreate(pppos_client_task, "ppp", 2048, self, 1, (TaskHandle_t *)&self->client_task_handle) != pdPASS
+    #else
+    xTaskCreatePinnedToCore(pppos_client_task, "ppp", 2048, self, 1, (TaskHandle_t *)&self->client_task_handle, MP_TASK_COREID) != pdPASS
+    #endif
+    ) {
         mp_raise_msg(&mp_type_RuntimeError, "failed to create worker task");
     }
 
@@ -231,7 +237,7 @@ STATIC mp_obj_t ppp_ifconfig(size_t n_args, const mp_obj_t *args) {
     if (n_args == 1) {
         // get
         if (self->pcb != NULL) {
-            dns = dns_getserver(0);
+            dns = *dns_getserver(0);
             struct netif *pppif = ppp_netif(self->pcb);
             mp_obj_t tuple[4] = {
                 netutils_format_ipv4_addr((uint8_t *)&pppif->ip_addr, NETUTILS_BIG),
@@ -283,5 +289,3 @@ const mp_obj_type_t ppp_if_type = {
     .name = MP_QSTR_PPP,
     .locals_dict = (mp_obj_dict_t *)&ppp_if_locals_dict,
 };
-
-#endif // !MICROPY_ESP_IDF_4
