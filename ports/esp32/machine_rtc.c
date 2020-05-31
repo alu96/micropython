@@ -168,6 +168,16 @@ STATIC mp_obj_t machine_rtc_memory(mp_uint_t n_args, const mp_obj_t *args) {
     }
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(machine_rtc_memory_obj, 1, 2, machine_rtc_memory);
+
+STATIC mp_obj_t machine_rtc_mem_ptr(mp_uint_t n_args, const mp_obj_t *args) {
+    if (n_args == 1) {
+        // return address of RTC memory
+        return mp_obj_new_int((mp_int_t)(uintptr_t)rtc_user_mem_data);
+    }
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(machine_rtc_mem_ptr_obj, 1, 1, machine_rtc_mem_ptr);
+
 #endif
 
 STATIC mp_obj_t machine_rtc_cal(mp_uint_t n_args, const mp_obj_t *args) {
@@ -186,6 +196,7 @@ STATIC const mp_rom_map_elem_t machine_rtc_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_cal), MP_ROM_PTR(&machine_rtc_cal_obj) },
     #if MICROPY_HW_RTC_USER_MEM_MAX > 0
     { MP_ROM_QSTR(MP_QSTR_memory), MP_ROM_PTR(&machine_rtc_memory_obj) },
+    { MP_ROM_QSTR(MP_QSTR_mem_ptr), MP_ROM_PTR(&machine_rtc_mem_ptr_obj) },
     #endif
 };
 STATIC MP_DEFINE_CONST_DICT(machine_rtc_locals_dict, machine_rtc_locals_dict_table);
