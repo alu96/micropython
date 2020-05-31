@@ -164,11 +164,12 @@ STATIC mp_obj_t ppp_active(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(ppp_active_obj, 1, 2, ppp_active);
 
 STATIC mp_obj_t ppp_connect_py(size_t n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    enum { ARG_authmode, ARG_username, ARG_password };
+    enum { ARG_authmode, ARG_username, ARG_password, ARG_default };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_authmode, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = PPPAUTHTYPE_NONE} },
         { MP_QSTR_username, MP_ARG_KW_ONLY | MP_ARG_OBJ, {.u_rom_obj = MP_ROM_NONE} },
         { MP_QSTR_password, MP_ARG_KW_ONLY | MP_ARG_OBJ, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_default,  MP_ARG_KW_ONLY | MP_ARG_OBJ, {.u_bool = true} },
     };
 
     mp_arg_val_t parsed_args[MP_ARRAY_SIZE(allowed_args)];
@@ -198,8 +199,11 @@ STATIC mp_obj_t ppp_connect_py(size_t n_args, const mp_obj_t *args, mp_map_t *kw
         const char *password_str = mp_obj_str_get_str(parsed_args[ARG_password].u_obj);
         pppapi_set_auth(self->pcb, parsed_args[ARG_authmode].u_int, username_str, password_str);
     }
-    if (pppapi_set_default(self->pcb) != ESP_OK) {
-        mp_raise_msg(&mp_type_OSError, "set default failed");
+
+    if (parsed_args[ARG_authmode].u_bool) {
+        if (pppapi_set_default(self->pcb) != ESP_OK) {
+            mp_raise_msg(&mp_type_OSError, "set default failed");
+        }
     }
 
     ppp_set_usepeerdns(self->pcb, true);
